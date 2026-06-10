@@ -1,0 +1,1610 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PE Deep Screening - 深筛工具</title>
+<style>
+  :root {
+    --c-bg: #F0F2F5;
+    --c-surface: #FFFFFF;
+    --c-primary: #1B2A4A;
+    --c-accent: #4A90D9;
+    --c-success: #2E7D32;
+    --c-danger: #C62828;
+    --c-gray: #6B7280;
+    --c-border: #E5E7EB;
+    --c-radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--c-bg);
+    color: #1F2937;
+    line-height: 1.6;
+  }
+
+  /* Nav */
+  .nav {
+    background: var(--c-primary);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .nav h1 { font-size: 18px; font-weight: 600; }
+  .nav .badge {
+    font-size: 11px;
+    background: var(--c-accent);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  /* Main */
+  .main {
+    max-width: 720px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+
+  /* Form Card */
+  .card {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 32px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+  }
+  .card h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--c-primary);
+    margin-bottom: 20px;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  .form-group label .required {
+    color: var(--c-danger);
+    margin-left: 2px;
+  }
+  .form-group label .optional {
+    color: var(--c-gray);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+  .form-group input[type="text"],
+  .form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
+  }
+
+  /* File Upload */
+  .file-upload {
+    border: 2px dashed var(--c-border);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .file-upload:hover {
+    border-color: var(--c-accent);
+    background: rgba(74, 144, 217, 0.03);
+  }
+  .file-upload.dragover {
+    border-color: var(--c-accent);
+    background: rgba(74, 144, 217, 0.08);
+  }
+  .file-upload .icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .file-upload .hint {
+    font-size: 12px;
+    color: var(--c-gray);
+  }
+  .file-upload .filename {
+    font-size: 13px;
+    color: var(--c-accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  /* Submit Button */
+  .btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: var(--c-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-submit:hover { background: #253B5E; }
+  .btn-submit:active { transform: scale(0.99); }
+  .btn-submit:disabled {
+    background: var(--c-gray);
+    cursor: not-allowed;
+  }
+
+  /* Progress */
+  .progress-card {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 20px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: none;
+  }
+  .progress-card.active { display: block; }
+
+  .prog-header { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+  .prog-title { font-size: 15px; font-weight: 600; color: var(--c-primary); white-space: nowrap; }
+  .prog-bar { flex:1; height:5px; background:var(--c-border); border-radius:3px; overflow:hidden; }
+  .prog-fill { height:100%; background:var(--c-accent); border-radius:3px; width:0; transition:width .6s ease; }
+
+  .prog-stages { display:flex; gap:0; margin-bottom:12px; border:1px solid var(--c-border); border-radius:8px; overflow:hidden; }
+  .prog-stage {
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:10px 6px; font-size:12px; color:var(--c-gray); position:relative;
+    background:#FAFBFC;
+  }
+  .prog-stage::after { content:''; position:absolute; right:0; top:25%; height:50%; width:1px; background:var(--c-border); }
+  .prog-stage:last-child::after { display:none; }
+  .prog-num {
+    width:20px; height:20px; border-radius:50%; background:var(--c-border); color:white;
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+  }
+  .prog-stage.active { background:#EBF5FF; color:var(--c-primary); font-weight:600; }
+  .prog-stage.active .prog-num { background:var(--c-accent); animation:pulse 1.5s infinite; }
+  .prog-stage.done { background:#F0FDF4; color:var(--c-success); }
+  .prog-stage.done .prog-num { background:var(--c-success); }
+  .prog-label { font-size:12px; }
+
+  @keyframes pulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(74,144,217,.4); }
+    50% { box-shadow:0 0 0 6px rgba(74,144,217,0); }
+  }
+
+  .progress-detail {
+    font-size:12px; color:var(--c-gray); padding:8px 12px; background:#F8FAFC;
+    border-radius:6px; min-height:18px; line-height:1.5;
+  }
+
+  /* Result Card */
+  .result-card {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: none;
+  }
+  .result-card.active { display: block; }
+  .result-card h2 {
+    font-size: 16px;
+    color: var(--c-success);
+    margin-bottom: 16px;
+  }
+  .result-actions {
+    display: flex;
+    gap: 12px;
+  }
+  .btn-primary {
+    padding: 12px 24px;
+    background: var(--c-accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { background: #3A7BC8; }
+  .btn-secondary {
+    padding: 12px 24px;
+    background: white;
+    color: var(--c-primary);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-secondary:hover { background: #F9FAFB; }
+
+  /* Error */
+  .error-card {
+    background: #FFEBEE;
+    border: 1px solid #FECACA;
+    border-radius: var(--c-radius);
+    padding: 20px;
+    display: none;
+  }
+  .error-card.active { display: block; }
+  .error-card h3 { color: var(--c-danger); font-size: 14px; margin-bottom: 8px; }
+  .error-card p { font-size: 13px; color: #7F1D1D; }
+  .error-card .error-detail {
+    margin-top: 12px;
+    padding: 12px;
+    background: #FFF5F5;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #991B1B;
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    display: none;
+  }
+  .error-card .error-detail.active { display: block; }
+  .error-card .toggle-detail {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--c-accent);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  /* Report iframe */
+  .report-frame {
+    width: 100%;
+    height: 90vh;
+    border: none;
+    border-radius: var(--c-radius);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  }
+
+  /* Footer */
+
+  /* Back-to-top button */
+  .back-to-top {
+    position: fixed; bottom: 24px; right: 24px;
+    width: 44px; height: 44px;
+    background: var(--c-primary);
+    color: white;
+    border: none; border-radius: 50%;
+    font-size: 20px; cursor: pointer;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.2s;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    z-index: 999;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .back-to-top.visible { opacity: 1; visibility: visible; }
+  .back-to-top:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
+
+  /* Tabs */
+  .tab-btn {
+    padding: 10px 20px; border: 1px solid var(--c-border); border-radius: 8px;
+    background: var(--c-surface); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--c-primary); color: white; border-color: var(--c-primary); }
+
+  /* Mode info bar */
+  .mode-info {
+    font-size: 13px;
+    color: #4B5563;
+    background: #F0F4FF;
+    border: 1px solid #C7D2FE;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    line-height: 1.7;
+  }
+  .mode-info strong { color: var(--c-primary); }
+  .mode-info .highlight { background: #DBEAFE; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+
+  /* Tip callout box */
+  .tip-box {
+    font-size: 12px;
+    color: #6B7280;
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-left: 4px solid #F59E0B;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 16px;
+    line-height: 1.6;
+  }
+  .tip-box strong { color: #92400E; }
+
+  /* Scoring methodology accordion */
+  .method-accordion {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .method-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--c-primary);
+    background: #F8FAFC;
+    border-bottom: 1px solid transparent;
+    user-select: none;
+  }
+  .method-header:hover { background: #F0F4FF; }
+  .method-accordion.open .method-header { border-bottom-color: var(--c-border); }
+  .method-arrow {
+    font-size: 12px;
+    transition: transform 0.2s;
+    color: var(--c-gray);
+  }
+  .method-accordion.open .method-arrow { transform: rotate(90deg); }
+  .method-body { display: none; padding: 16px 20px; }
+  .method-accordion.open .method-body { display: block; }
+
+  .method-section { margin-bottom: 8px; }
+  .method-section:last-child { margin-bottom: 0; }
+  .method-section h4 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--c-primary);
+    cursor: pointer;
+    margin-bottom: 4px;
+    padding: 6px 0;
+    user-select: none;
+  }
+  .method-section h4:hover { color: var(--c-accent); }
+  .method-arrow-sm {
+    font-size: 11px;
+    transition: transform 0.2s;
+    color: var(--c-gray);
+  }
+  .method-section-body { display: none; padding-bottom: 12px; }
+  .method-section-body.open { display: block; }
+
+  /* Score cards */
+  .score-cards {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .score-card {
+    background: #F8FAFC;
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+    border-top: 3px solid var(--c);
+    position: relative;
+  }
+  .score-card.highlight { background: #F0FDF4; }
+  .score-card .sc-label { font-size: 12px; font-weight: 600; color: var(--c-primary); }
+  .score-card .sc-weight { font-size: 20px; font-weight: 700; color: var(--c); margin: 2px 0; }
+  .score-card .sc-core {
+    font-size: 9px;
+    background: #FFF3E0;
+    color: #E65100;
+    padding: 1px 4px;
+    border-radius: 3px;
+    vertical-align: middle;
+    font-weight: 600;
+  }
+  .score-card .sc-desc { font-size: 10px; color: var(--c-gray); margin-top: 2px; line-height: 1.3; }
+
+  /* Decision grid */
+  .decision-grid {
+    display: grid;
+    grid-template-columns: 10% 8% 1fr 16%;
+    font-size: 13px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--c-border);
+  }
+  .dg-row { display: contents; }
+  .dg-row > div {
+    padding: 8px 10px;
+    background: var(--row-bg, #fff);
+    display: flex;
+    align-items: center;
+  }
+  .dg-header > div {
+    background: var(--c-primary);
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .dg-score { font-weight: 700; font-size: 15px; }
+  .dg-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+  }
+  .dg-a { background: #2E7D32; }
+  .dg-b { background: #1E40AF; }
+  .dg-cd { background: #C62828; }
+  .dg-pass { background: #2E7D32; }
+  .dg-watch { background: #F57F17; }
+  .dg-reject { background: #C62828; }
+
+  /* Qual grid */
+  .qual-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .qual-card {
+    padding: 12px;
+    background: #F8FAFC;
+    border-radius: 8px;
+    border: 1px solid var(--c-border);
+  }
+  .qual-card strong { display: block; margin-bottom: 6px; font-size: 13px; }
+
+  /* Legacy weight bar */
+  .weight-bar {
+    display: flex;
+    height: 32px;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    margin: 8px 0;
+  }
+  .weight-bar div { display: flex; align-items: center; justify-content: center; }
+
+  /* Tag pills */
+  .mt-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 0 2px;
+  }
+  .mt-green { background: #E8F5E9; color: #2E7D32; }
+  .mt-blue { background: #E3F2FD; color: #1565C0; }
+  .mt-orange { background: #FFF3E0; color: #E65100; }
+  .mt-red { background: #FFEBEE; color: #C62828; }
+  .mt-purple { background: #F3E5F5; color: #7B1FA2; }
+  .mt-gray { background: #ECEFF1; color: #546E7A; }
+
+  .method-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .method-grid .rule-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #F9FAFB;
+  }
+
+  .batch-textarea {
+    width: 100%; min-height: 200px; padding: 12px; border: 1px solid var(--c-border);
+    border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; outline: none;
+  }
+  .batch-textarea:focus { border-color: var(--c-accent); }
+  /* Batch results table */
+  .batch-results { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+  .batch-results th { background: var(--c-primary); color: white; padding: 8px 10px; text-align: left; }
+  .batch-results td { padding: 7px 10px; border-bottom: 1px solid var(--c-border); }
+  .row-PASS { background: #E8F5E9; } .row-REJECT { background: #FFEBEE; } .row-WATCH { background: #FFF8E1; } .row-EXCLUDED { background: #F5F5F5; color: #9E9E9E; }
+  .verdict-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  .v-PASS { background: #2E7D32; color: white; } .v-REJECT { background: #C62828; color: white; } .v-WATCH { background: #F57F17; color: white; } .v-EXCLUDED { background: #9E9E9E; color: white; }
+  .excluded-badge { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; background: #F5F5F5; color: #9E9E9E; border: 1px solid #E0E0E0; }
+
+  .footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--c-gray);
+  }
+
+  .batch-detail {
+    display: none; background: var(--c-surface); border-radius: 8px;
+    padding: 16px 20px; margin-top: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .batch-detail.active { display: block; }
+  .batch-detail h3 { font-size: 14px; color: var(--c-primary); margin-bottom: 12px; }
+  .batch-detail .score-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .batch-detail .score-item {
+    padding: 6px 8px; border-radius: 6px; font-size: 11px; text-align: center;
+    background: var(--c-gray-bg); min-width: 70px;
+  }
+  .batch-detail .score-item .val { font-size: 15px; font-weight: 700; }
+  .batch-detail .red-item { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; margin: 2px; }
+  .batch-detail .ref-list { font-size: 11px; max-height: 200px; overflow-y: auto; }
+  .batch-detail .ref-list li { padding: 3px 0; color: var(--c-text-secondary); }
+  .batch-results tbody tr { cursor: pointer; }
+  .batch-results tbody tr:hover { filter: brightness(0.95); }
+
+  /* History */
+  #historyCard h2 { font-size: 15px; margin-bottom: 0; }
+  #historyCard h3 { font-size: 13px; font-weight: 600; color: var(--c-primary); margin: 16px 0 8px; }
+  #historyCard .batch-results { margin-top: 0; }
+  #historyTable { table-layout: fixed; }
+  #historyCard .batch-results td { font-size: 12px; }
+  #historyCard .batch-results th { font-size: 12px; }
+  #historyCard .verdict-badge { font-size: 12px; }
+  #historyCard .btn-primary, #historyCard .btn-secondary { font-size: 12px; }
+  .hist-stats-line { font-size: 12px; color: var(--c-gray); margin-bottom: 14px; }
+  .hist-pager { margin-top: 10px; display: flex; gap: 6px; justify-content: center; }
+  .hist-pager button { padding: 4px 10px; font-size: 12px; border: 1px solid var(--c-border); border-radius: 4px; background: var(--c-surface); cursor: pointer; }
+  .hist-pager button:hover { background: var(--c-primary); color: #fff; }
+  .hist-pager button:disabled { opacity: 0.3; cursor: default; }
+  .hist-pager button.active-page { background: var(--c-primary); color: #fff; }
+
+
+
+</style>
+</head>
+<body>
+
+  <nav class="nav">
+    <h1>📊 PE Deep Screening</h1>
+    <span class="badge">v2.0</span>
+  </nav>
+
+<div class="main">
+
+  <!-- 模式切换 -->
+  <div style="display:flex;gap:12px;margin-bottom:14px;">
+    <button class="tab-btn active" id="tabSingle" onclick="switchTab('single')">🔍 单个深筛</button>
+    <button class="tab-btn" id="tabBatch" onclick="switchTab('batch')">📊 批量完整分析</button>
+	    <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">📁 历史报告</button>
+    <button class="tab-btn" id="tabLogic" onclick="switchTab('logic')">📖 分析逻辑</button>
+  </div>
+
+  <!-- 模式说明 -->
+  <div class="mode-info" id="modeInfo">
+    <strong>🔍 单个深筛</strong> — 输入一家公司，执行完整搜索 → 分析 → 评分 → <span class="highlight">生成 HTML 深筛报告</span>，可在「历史报告」中查看和分享。<br>
+    <strong>📊 批量完整分析</strong> — 上传 Excel 或粘贴多家公司，<span class="highlight">不生成 HTML 报告</span>，结果以表格展示并提供 Excel 下载。
+  </div>
+
+  <!-- 输入表单 -->
+  <div class="card" id="formCard">
+    <h2>标的深筛</h2>
+    <form id="screenForm" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>公司名称<span class="required">*</span></label>
+        <input type="text" name="company_name" placeholder="请输入完整公司名称，例：上海瀛久农业科技发展有限公司" required>
+	        <div style="font-size:11px;color:var(--c-gray);margin-top:4px;">请使用工商注册全称，包含"有限公司"/"股份有限公司"等后缀，以确保搜索准确</div>
+      </div>
+      <div class="form-group">
+        <label>官网<span class="optional">（选填）</span></label>
+        <input type="text" name="website" placeholder="例：www.example.com">
+      </div>
+      <div class="form-group">
+        <label>行业<span class="optional">（选填）</span></label>
+        <input type="text" name="industry" placeholder="例：食品饮料OEM/ODM">
+      </div>
+      <div class="form-group">
+        <label>AI 模型</label>
+        <select name="model" style="width:100%;padding:10px 14px;border:1px solid var(--c-border);border-radius:8px;font-size:14px;">
+          <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash（默认）</option>
+          <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+          <option value="kimi-k2.6">Kimi K2.6（长上下文）</option>
+          <option value="moonshot-v1-128k">Moonshot V1 128K（备选）</option>
+        </select>
+        <div style="font-size:11px;color:var(--c-gray);margin-top:4px;">DeepSeek 为默认模型，支持分析阶段自主补搜；Kimi K2.6 适合长上下文分析，补搜由程序预先执行</div>
+      </div>
+      <div class="form-group">
+        <label>BP 文件<span class="optional">（选填，支持 PDF / PPTX）</span></label>
+        <div class="file-upload" id="fileUpload">
+          <div class="icon">📎</div>
+          <div>点击或拖拽上传 BP 文件</div>
+          <div class="hint">支持 PDF、PPTX、MD、HTML、TXT 格式</div>
+          <div class="filename" id="fileName"></div>
+          <input type="file" name="bp_file" id="bpFileInput" accept=".pdf,.pptx,.ppt,.txt,.md,.html,.htm" style="display:none">
+        </div>
+      </div>
+      <button type="submit" class="btn-submit" id="submitBtn">开始深筛</button>
+    </form>
+    <div class="tip-box"><strong>单个深筛</strong>：执行完整搜索 → AI 分析 → <strong>生成 HTML 深筛报告页面</strong>，可在「历史报告」中查看、下载和分享。</div>
+  </div>
+
+  <!-- 评分体系说明（可折叠） -->
+  <div class="method-accordion" id="methodAccordion">
+    <div class="method-header" onclick="this.parentElement.classList.toggle('open')">
+      <span><strong>PE 深筛评分体系</strong> &mdash; Compounder 透镜 &middot; 5 维加权 &middot; 2 项定性</span>
+      <span class="method-arrow">&#9660;</span>
+    </div>
+    <div class="method-body">
+
+      <div class="score-cards">
+        <div class="score-card" style="--c:#1565C0;--w:10%">
+          <div class="sc-label">行业匹配度</div>
+          <div class="sc-weight">10%</div>
+          <div class="sc-desc">行业准入门槛，不合方向直接筛掉</div>
+        </div>
+        <div class="score-card highlight" style="--c:#2E7D32;--w:30%">
+          <div class="sc-label">Recurring Revenue</div>
+          <div class="sc-weight">30% <span class="sc-core">核心</span></div>
+          <div class="sc-desc">复购可预测性，Compounder 第一支柱</div>
+        </div>
+        <div class="score-card highlight" style="--c:#E65100;--w:25%">
+          <div class="sc-label">市场地位</div>
+          <div class="sc-weight">25% <span class="sc-core">核心</span></div>
+          <div class="sc-desc">利基龙头地位，Compounder 第二支柱</div>
+        </div>
+        <div class="score-card" style="--c:#7B1FA2;--w:20%">
+          <div class="sc-label">商业模式</div>
+          <div class="sc-weight">20%</div>
+          <div class="sc-desc">资产轻重、毛利、可复制性、壁垒</div>
+        </div>
+        <div class="score-card" style="--c:#F57F17;--w:15%">
+          <div class="sc-label">客户粘性</div>
+          <div class="sc-weight">15%</div>
+          <div class="sc-desc">切换成本、客户集中度</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--c-gray);margin:12px 0 4px;line-height:1.6;">每个维度 1-5 分，加权求和得企业质量分（不归一化）。RR（30%）+ 市场地位（25%）合占 55%，反映对"复购可预测性 + 利基龙头"的优先排序。</div>
+
+      <div class="method-section">
+        <h4 onclick="this.nextElementSibling.classList.toggle('open')">
+          <span>&#9670; 评级 → 推进建议决策流</span>
+          <span class="method-arrow-sm">&#9660;</span>
+        </h4>
+        <div class="method-section-body open">
+          <div class="decision-grid">
+            <div class="dg-row dg-header">
+              <div>评分</div><div>评级</div><div>条件</div><div>结论</div>
+            </div>
+            <div class="dg-row" style="--row-bg:#E8F5E9">
+              <div><span class="dg-score">≥3.8</span></div>
+              <div><span class="dg-badge dg-a">A</span></div>
+              <div>规模未见不适配 + 无致命障碍</div>
+              <div><span class="dg-badge dg-pass">推进</span></div>
+            </div>
+            <div class="dg-row" style="--row-bg:#E8F5E9">
+              <div></div><div></div>
+              <div>推断规模不适配</div>
+              <div><span class="dg-badge dg-watch">观察</span></div>
+            </div>
+            <div class="dg-row" style="--row-bg:#E8F5E9">
+              <div></div><div></div>
+              <div>明确规模不适配 / 证据 C-D 级</div>
+              <div><span class="dg-badge dg-reject">不推进</span></div>
+            </div>
+            <div class="dg-row" style="--row-bg:#F0F4FF">
+              <div><span class="dg-score">3.0-3.7</span></div>
+              <div><span class="dg-badge dg-b">B</span></div>
+              <div>规模未见不适配 / 明确证据规模适配</div>
+              <div><span class="dg-badge dg-pass">推进</span></div>
+            </div>
+            <div class="dg-row" style="--row-bg:#F0F4FF">
+              <div></div><div></div>
+              <div>推断规模不适配</div>
+              <div><span class="dg-badge dg-watch">观察</span></div>
+            </div>
+            <div class="dg-row" style="--row-bg:#F0F4FF">
+              <div></div><div></div>
+              <div>明确规模不适配</div>
+              <div><span class="dg-badge dg-reject">不推进</span></div>
+            </div>
+            <div class="dg-row" style="--row-bg:#FFEBEE">
+              <div><span class="dg-score">&lt;3.0</span></div>
+              <div><span class="dg-badge dg-cd">C/D</span></div>
+              <div>&mdash;</div>
+              <div><span class="dg-badge dg-reject">不推进</span></div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--c-gray);margin-top:8px;">
+            <strong>否决条件：</strong>严重红旗 &middot; 行业匹配度≤2 &middot; 交易可行性 <em>evidence_no</em> &middot; 规模明确不适配
+          </div>
+        </div>
+      </div>
+
+      <div class="method-section">
+        <h4 onclick="this.nextElementSibling.classList.toggle('open')">
+          <span>&#9670; 2 项定性标签（不参与评分）</span>
+          <span class="method-arrow-sm">&#9660;</span>
+        </h4>
+        <div class="method-section-body">
+          <div class="qual-grid">
+            <div class="qual-card">
+              <strong>角色定位</strong>
+              <div class="qual-tags">
+                <span class="mt-pill mt-blue">Platform 平台型</span>
+                <span class="mt-pill mt-green">Add-on 补强型</span>
+                <span class="mt-pill mt-purple">Both 皆可</span>
+                <span class="mt-pill mt-gray">Neither 无</span>
+              </div>
+            </div>
+            <div class="qual-card">
+              <strong>交易可行性</strong>
+              <div class="qual-tags">
+                <span class="mt-pill mt-green">明确可推进</span>
+                <span class="mt-pill mt-blue">推断可推进</span>
+                <span class="mt-pill mt-orange">推断障碍</span>
+                <span class="mt-pill mt-red">明确不可推进</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 批量输入 -->
+  <div class="card" id="batchCard" style="display:none;">
+    <h2>批量完整分析</h2>
+    <div class="tip-box" style="margin-top:0;margin-bottom:16px;"><strong>两步式批量分析</strong>：① 上传企查查 Excel → 点击「开始预筛选」→ 秒级完成表格规则检查（零 API 消耗）→ 查看通过/排除结果；② 确认后点击「开始深筛分析」→ 仅对通过公司执行完整 AI 分析。<span class="highlight">每一步都可单独下载 Excel</span>。</div>
+
+    <!-- 预筛选规则 -->
+    <div class="method-accordion" style="margin-bottom:16px;">
+      <div class="method-header" onclick="this.parentElement.classList.toggle('open')">
+        <span><strong>自动预筛选规则</strong> &mdash; 基于企查查工商数据 &middot; 8 条规则 &middot; 零 API 消耗 &middot; 秒级完成</span>
+        <span class="method-arrow">&#9660;</span>
+      </div>
+      <div class="method-body">
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <thead><tr style="background:var(--c-gray-bg);"><th style="padding:4px 8px;text-align:left;width:40px;">规则</th><th style="padding:4px 8px;text-align:left;width:80px;">依赖列</th><th style="padding:4px 8px;text-align:left;">判定条件</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#C62828;">R8</td><td style="padding:3px 8px;">经营状态</td><td style="padding:3px 8px;">含"注销""吊销""清算""停业""经营异常""严重违法"任一关键词</td></tr>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#C62828;">R1</td><td style="padding:3px 8px;">省份</td><td style="padding:3px 8px;">注册地不在目标地域（上海/江苏/浙江/安徽/福建/湖南/湖北/广东/四川/重庆）</td></tr>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#F57F17;">R7</td><td style="padding:3px 8px;">成立日期</td><td style="padding:3px 8px;">成立距今不足 3 年</td></tr>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#F57F17;">R9</td><td style="padding:3px 8px;">参保人数</td><td style="padding:3px 8px;">参保人数 ≤ 5 人（可能为壳公司/空转）</td></tr>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#F57F17;">R11</td><td style="padding:3px 8px;">注册资本+实缴</td><td style="padding:3px 8px;">注册资本 &lt; 50 万且实缴资本为 0</td></tr>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#1565C0;">R12*</td><td style="padding:3px 8px;">企业类型</td><td style="padding:3px 8px;">含"外商""港澳台""中外合资""外资" — <strong>可选，默认不启用</strong>。需勾选上方"排除外资"复选框才会生效</td></tr>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#1565C0;">R5</td><td style="padding:3px 8px;">企业类型</td><td style="padding:3px 8px;">含"国有独资""集体所有制""全民所有制" — 交易审批不可控</td></tr>
+            <tr><td style="padding:3px 8px;font-weight:600;color:#1565C0;">R3</td><td style="padding:3px 8px;">企业类型</td><td style="padding:3px 8px;">含"国有""集体""集团""央企" — 集团/国企体系，决策链过长</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:11px;color:var(--c-gray);margin:8px 0 0;">被排除的公司<strong>不消耗 API 额度</strong>，直接跳过完整 AI 深筛。搜索型规则 R2（上市公司子公司）/ R4（已上市）/ R6（近期机构融资）保留到 AI 分析阶段判断。</p>
+      </div>
+    </div>
+
+    <div class="file-upload" id="batchFileUpload" onclick="document.getElementById('batchFileInput').click()">
+      <div class="icon">📊</div>
+      <div>点击上传企查查导出的 Excel</div>
+      <div class="hint">支持 .xlsx；须包含”企业名称”或”公司名称”列；单次最多 2000 家</div>
+      <div class="filename" id="batchFileName"></div>
+      <input type="file" id="batchFileInput" accept=".xlsx" style="display:none">
+    </div>
+    <p style="font-size:12px;color:var(--c-gray);margin:16px 0 8px;">备用输入：没有 Excel 时，可逐行输入工商注册全称</p>
+    <textarea class="batch-textarea" id="batchInput" placeholder="上海瀛久农业科技发展有限公司&#10;江苏源沣食品有限公司&#10;..."></textarea>
+    <div style="margin-top:12px;">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;font-size:13px;color:#1F2937;">
+        <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+          <input type="radio" name="batchMode" value="prescreen" checked style="cursor:pointer;"> 仅预筛选（秒级完成，零 API 消耗）
+        </label>
+        <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+          <input type="radio" name="batchMode" value="full" style="cursor:pointer;"> 直接深筛（跳过预筛选，所有公司进入完整 AI 分析）
+        </label>
+      </div>
+      <div style="display:flex;gap:16px;align-items:center;">
+        <button class="btn-submit" id="batchSubmitBtn" onclick="startBatch()" style="margin-bottom:0;">开始预筛选</button>
+        <label style="cursor:pointer;display:flex;align-items:center;gap:4px;font-size:12px;color:#1F2937;">
+          <input type="checkbox" id="batchExcludeForeign" style="cursor:pointer;"> 排除外资（含港澳台）控股
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 进度 -->
+  <div class="progress-card" id="progressCard">
+    <div class="prog-header">
+      <div class="prog-title">正在深筛 <span id="progressCompany"></span></div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+    <div class="prog-stages">
+      <div class="prog-stage" id="stage-search"><span class="prog-num">1</span><span class="prog-label">搜索</span></div>
+      <div class="prog-stage" id="stage-crawl"><span class="prog-num">2</span><span class="prog-label">抓取</span></div>
+      <div class="prog-stage" id="stage-analyze"><span class="prog-num">3</span><span class="prog-label">分析</span></div>
+      <div class="prog-stage" id="stage-render"><span class="prog-num">4</span><span class="prog-label">生成</span></div>
+    </div>
+    <div class="progress-detail" id="progressDetail">准备中...</div>
+    <div id="liveTextArea" style="display:none;margin-top:10px;max-height:320px;overflow-y:auto;background:var(--c-gray-bg);border-radius:6px;padding:12px;font-size:12px;line-height:1.7;white-space:pre-wrap;font-family:monospace;color:var(--c-text-secondary);"></div>
+  </div>
+
+  <!-- 批量进度 -->
+  <div class="progress-card" id="batchProgressCard">
+    <h2 id="batchProgressTitle">📊 批量完整分析中...</h2>
+    <div class="progress-detail" id="batchProgressDetail">准备中...</div>
+    <div style="margin:8px 0;background:var(--c-border);border-radius:4px;height:4px;">
+      <div id="batchProgressBar" style="background:var(--c-accent);height:4px;border-radius:4px;width:0%;transition:width 0.3s;"></div>
+    </div>
+    <div class="prog-stages" style="margin:4px 0;">
+      <div class="prog-stage" id="bs-pre-screen"><span class="prog-num">1</span><span class="prog-label">预筛选</span></div>
+      <div class="prog-stage" id="bs-analyze"><span class="prog-num">2</span><span class="prog-label">完整分析</span></div>
+    </div>
+    <div id="batchPrescreenBar" style="display:none;margin:8px 0;">
+      <a id="batchPrescreenDownload" href="#" class="btn-primary" style="font-size:12px;padding:4px 14px;">📋 下载预筛选结果（通过 <span id="prescreenPassed">0</span> 家，排除 <span id="prescreenExcluded">0</span> 家）</a>
+    </div>
+    <div id="batchDeepAnalyzeBar" style="display:none;margin:8px 0;">
+      <button class="btn-submit" id="batchDeepAnalyzeBtn" onclick="startDeepAnalysis()" style="font-size:13px;padding:8px 20px;">🚀 开始深筛分析（<span id="batchPassedCount">0</span> 家通过预筛）</button>
+      <span style="font-size:11px;color:var(--c-gray);margin-left:12px;">仅对通过预筛的公司执行完整 AI 分析，消耗 API 额度</span>
+    </div>
+    <div id="batchInterimBar" style="display:none;margin:8px 0;">
+      <a id="batchInterimDownload" href="#" class="btn-primary" style="font-size:12px;padding:4px 14px;">⬇️ 下载当前结果（已分析 <span id="batchInterimCount">0</span> 家）</a>
+    </div>
+    <div style="max-height:500px;overflow-y:auto;margin-top:12px;">
+      <table class="batch-results" id="batchResultsTable">
+        <thead><tr><th>#</th><th style="min-width:140px">公司名称</th><th>注册资本</th><th>来源</th><th>企业质量分</th><th>评级</th><th>推进建议</th><th>红旗</th><th style="min-width:200px">摘要</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="result-card" id="resultCard">
+    <h2>✅ 报告生成完成 — <span id="resultCompanyName"></span></h2>
+    <div class="result-actions">
+      <a class="btn-primary" id="viewBtn" href="#" target="_blank">📄 查看报告</a>
+      <a class="btn-primary" id="downloadBtn" href="#" download>⬇️ 下载报告</a>
+      <button class="btn-secondary" onclick="resetForm()">🔄 新建深筛</button>
+    </div>
+  </div>
+
+  <!-- 错误 -->
+  <div class="error-card" id="errorCard">
+    <h3>❌ 出错了</h3>
+    <p id="errorMessage"></p>
+    <div class="toggle-detail" id="toggleDetail" onclick="toggleErrorDetail()">显示详细信息 ▼</div>
+    <div class="error-detail" id="errorDetail"></div>
+    <button class="btn-secondary" style="margin-top:12px" onclick="resetForm()">重新开始</button>
+  </div>
+
+  <!-- 批量结果 -->
+  <div class="result-card" id="batchResultCard">
+    <h2>✅ 批量完整分析完成</h2>
+    <div class="result-actions">
+      <a class="btn-primary" id="batchDownloadBtn" href="#">⬇️ 下载 Excel</a>
+      <button class="btn-secondary" onclick="resetBatch()">🔄 新建批量分析</button>
+    </div>
+  </div>
+
+  <!-- 分析逻辑 -->
+  <div class="card" id="logicCard" style="display:none;">
+    <h2>分析逻辑</h2>
+    <div class="tip-box" style="margin-top:0;">本页介绍 PE Deep Screening 从信息检索到最终评分的完整分析链路与决策框架。所有环节均已工程化落地，非概念设计。</div>
+
+    <!-- Pipeline overview -->
+    <div class="method-accordion" style="margin-bottom:12px;">
+      <div class="method-header" onclick="this.parentElement.classList.toggle('open')">
+        <span><strong>一、信息检索管线</strong> &mdash; 多源分层 · 结构化去重 · 质量过滤</span>
+        <span class="method-arrow">&#9660;</span>
+      </div>
+      <div class="method-body">
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <thead><tr style="background:var(--c-gray-bg);"><th style="padding:6px 10px;text-align:left;width:100px;">层级</th><th style="padding:6px 10px;text-align:left;width:140px;">来源</th><th style="padding:6px 10px;text-align:left;">说明</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:5px 10px;font-weight:600;">L1 多源搜索</td><td style="padding:5px 10px;">Exa / Tavily / 百度</td><td style="padding:5px 10px;">按尽调主题（经营、规模、风险、市场等）构造查询词，Exa 优先 → Tavily 兜底 → 百度补充中文源。搜索结果经公司名匹配、垃圾域名过滤、URL 去重</td></tr>
+            <tr><td style="padding:5px 10px;font-weight:600;">L2 微信补充</td><td style="padding:5px 10px;">微信公众号文章</td><td style="padding:5px 10px;">CimiData API 搜索微信公众号经营事实（产品、客户、产能），用于交叉验证和补充线索，不作为独立证据来源</td></tr>
+            <tr><td style="padding:5px 10px;font-weight:600;">L3 工商核验</td><td style="padding:5px 10px;">企查查 MCP</td><td style="padding:5px 10px;">自动查询工商登记、股东、实控人、经营状态、参保人数等注册信息，作为身份核验和预筛选数据基础</td></tr>
+            <tr><td style="padding:5px 10px;font-weight:600;">L4 深度抓取</td><td style="padding:5px 10px;">Playwright 浏览器</td><td style="padding:5px 10px;">对搜索结果中的关键页面（官网、新闻、行业数据库）进行全文抓取，提取结构化经营数据</td></tr>
+            <tr><td style="padding:5px 10px;font-weight:600;">L5 AI 自主补搜</td><td style="padding:5px 10px;">LLM Tool Calling</td><td style="padding:5px 10px;">AI 在分析过程中发现信息缺口时，可自主调用 search_web 工具补充搜索（最多 3 轮），搜索结果自动纳入统一编号引用体系</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Scoring -->
+    <div class="method-accordion" style="margin-bottom:12px;">
+      <div class="method-header" onclick="this.parentElement.classList.toggle('open')">
+        <span><strong>二、评分框架</strong> &mdash; Compounder 透镜 · 5 维加权 · 程序复算</span>
+        <span class="method-arrow">&#9660;</span>
+      </div>
+      <div class="method-body">
+        <p style="font-size:12px;color:var(--c-gray);margin-bottom:12px;">AI 对每个维度输出 1-5 分 + 分析理由 + 证据等级。程序用固定权重复算企业质量分与 ABCD 评级，<strong>不相信 AI 的算术</strong>。</p>
+        <div class="score-cards">
+          <div class="score-card" style="--c:#1565C0;--w:10%"><div class="sc-label">行业匹配度</div><div class="sc-weight">10%</div><div class="sc-desc">冻品/饮料/调味OEM=5分，其他食品加工=4分</div></div>
+          <div class="score-card highlight" style="--c:#2E7D32;--w:30%"><div class="sc-label">Recurring Revenue</div><div class="sc-weight">30% <span class="sc-core">核心</span></div><div class="sc-desc">长约/复购/持续供货证据，KA供应商=5分</div></div>
+          <div class="score-card highlight" style="--c:#E65100;--w:25%"><div class="sc-label">市场地位</div><div class="sc-weight">25% <span class="sc-core">核心</span></div><div class="sc-desc">隐形冠军识别：全国龙头=5，区域龙头=4</div></div>
+          <div class="score-card" style="--c:#7B1FA2;--w:20%"><div class="sc-label">商业模式</div><div class="sc-weight">20%</div><div class="sc-desc">轻资产/高毛利/可复制=5，纯贸易=1</div></div>
+          <div class="score-card" style="--c:#F57F17;--w:15%"><div class="sc-label">客户粘性</div><div class="sc-weight">15%</div><div class="sc-desc">切换成本+客户分散度，纯标品=2</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--c-gray);margin-top:10px;line-height:1.6;">
+          <strong>证据等级</strong>（每维度）：4=明确直接证据 / 3=较强公开证据 / 2=合理推断 / 1=未见公开依据<br>
+          <strong>定性输出</strong>：角色定位（Platform / Add-on / Both / Neither）+ 交易可行性（evidence_yes / inferred_yes / inferred_no / evidence_no）
+        </div>
+      </div>
+    </div>
+
+    <!-- Decision -->
+    <div class="method-accordion" style="margin-bottom:12px;">
+      <div class="method-header" onclick="this.parentElement.classList.toggle('open')">
+        <span><strong>三、决策规则</strong> &mdash; ABCD 评级 → 推进建议 · 红旗联动 · 自我审查</span>
+        <span class="method-arrow">&#9660;</span>
+      </div>
+      <div class="method-body">
+        <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:12px;">
+          <thead><tr style="background:var(--c-gray-bg);"><th style="padding:6px 10px;text-align:left;">条件</th><th style="padding:6px 10px;text-align:left;width:100px;">企业质量分</th><th style="padding:6px 10px;text-align:left;width:120px;">推进建议</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:5px 10px;">质量高 + 规模适配 + 无障碍</td><td style="padding:5px 10px;">≥ 3.8 (A)</td><td style="padding:5px 10px;color:#2E7D32;font-weight:700;">推进</td></tr>
+            <tr><td style="padding:5px 10px;">质量高 + 规模可能不适配</td><td style="padding:5px 10px;">≥ 3.0 (A/B)</td><td style="padding:5px 10px;color:#F57F17;font-weight:700;">观察</td></tr>
+            <tr><td style="padding:5px 10px;">质量一般 / 规模明确不适配</td><td style="padding:5px 10px;">2.0–3.7 (B/C)</td><td style="padding:5px 10px;color:#F57F17;font-weight:700;">观察</td></tr>
+            <tr><td style="padding:5px 10px;">质量差 / 严重红旗 / 交易不可行</td><td style="padding:5px 10px;">&lt; 2.0 (C/D)</td><td style="padding:5px 10px;color:#C62828;font-weight:700;">不建议推进</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px;color:var(--c-gray);line-height:1.6;">
+          <strong>红旗约束</strong>：14 项 PE 红旗（一次性收入、大客户依赖、老板关系、技术替代等），严重红旗或 ≥3 项红色 → 强制不建议推进。<br>
+          <strong>交易可行性否决</strong>：evidence_no → 强制不建议推进。<br>
+          <strong>自我审查</strong>（Reflection）：评分完成后程序自动检查内部矛盾（如 A 级 + 规模明确过小 → 推进），发现矛盾自动修正。
+        </p>
+      </div>
+    </div>
+
+    <!-- Pre-screen -->
+    <div class="method-accordion" style="margin-bottom:12px;">
+      <div class="method-header" onclick="this.parentElement.classList.toggle('open')">
+        <span><strong>四、批量预筛选</strong> &mdash; 8 条表格规则 · 短路执行 · 零 API 消耗</span>
+        <span class="method-arrow">&#9660;</span>
+      </div>
+      <div class="method-body">
+        <p style="font-size:12px;color:var(--c-gray);margin-bottom:10px;">上传企查查 Excel 后，程序先用表格中的工商数据做硬性排除。被排除的公司<strong>不消耗 API 额度</strong>，直接跳过完整 AI 深筛。预期筛掉 50-70%。</p>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <thead><tr style="background:var(--c-gray-bg);"><th style="padding:5px 8px;text-align:left;width:36px;">规则</th><th style="padding:5px 8px;text-align:left;width:140px;">检查项</th><th style="padding:5px 8px;text-align:left;">判定</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#C62828;">R8</td><td style="padding:4px 8px;">经营状态</td><td style="padding:4px 8px;">含注销/吊销/清算/停业/经营异常/严重违法</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#C62828;">R1</td><td style="padding:4px 8px;">省份</td><td style="padding:4px 8px;">不在目标地域（上海/江苏/浙江/安徽/福建/湖南/湖北/广东/四川/重庆）</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#F57F17;">R7</td><td style="padding:4px 8px;">成立日期</td><td style="padding:4px 8px;">成立距今 &lt; 3 年</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#F57F17;">R9</td><td style="padding:4px 8px;">参保人数</td><td style="padding:4px 8px;">≤ 5 人（可能为壳公司/空转）</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#F57F17;">R11</td><td style="padding:4px 8px;">注册资本</td><td style="padding:4px 8px;">&lt; 50 万且实缴为 0</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#1565C0;">R12*</td><td style="padding:4px 8px;">企业类型</td><td style="padding:4px 8px;">外资/港澳台控股（可选，默认不启用）</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#1565C0;">R5</td><td style="padding:4px 8px;">企业类型</td><td style="padding:4px 8px;">国有独资/集体所有制/全民所有制</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:700;color:#1565C0;">R3</td><td style="padding:4px 8px;">企业类型</td><td style="padding:4px 8px;">国有/集体/集团/央企体系</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tech Stack -->
+    <div class="method-accordion">
+      <div class="method-header" onclick="this.parentElement.classList.toggle('open')">
+        <span><strong>五、技术架构</strong> &mdash; Agentic RAG · Multi-Model · Guardrails</span>
+        <span class="method-arrow">&#9660;</span>
+      </div>
+      <div class="method-body" style="font-size:12px;color:var(--c-gray);line-height:1.7;">
+        <strong>Agentic RAG</strong>：AI 不是被动分析给定文本，而是持有搜索工具，自主决定搜什么、搜几轮、搜完怎么用。程序预搜索提供信息起点，AI 在分析中动态补搜。<br>
+        <strong>Multi-Model Router</strong>：支持 DeepSeek V4 Pro（默认，工具调用能力强）、Kimi K2.6（256K 上下文免工具调用）、Moonshot V1 128K（备选）。<br>
+        <strong>LLM-as-Judge + Guardrails</strong>：AI 负责观察和推理，程序负责裁判——固定权重重算总分、红旗规则强制封顶维度分、交易可行性硬否决。<br>
+        <strong>Streaming Response</strong>：分析阶段实时流式输出文本到前端，用户可知 AI 进度。<br>
+        <strong>Structured Output</strong>：10 种容错策略的 JSON 解析器 + 终极正则兜底，确保非结构化 LLM 输出可被程序化处理。<br>
+        <strong>Self-Critique</strong>：评分完成后自动检查 A级+规模过小仍推"推进"等内部矛盾，发现即修正。
+      </div>
+    </div>
+  </div>
+
+  <!-- 历史报告 -->
+  <div class="card" id="historyCard" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2>📁 历史报告 <span id="histPageInfo" style="font-size:12px;color:var(--c-gray);font-weight:400;margin-left:8px;"></span></h2>
+      <button class="btn-secondary" onclick="loadHistory()" style="font-size:12px;">🔄 刷新</button>
+    </div>
+
+    <!-- Stats -->
+    <div id="histStats" class="hist-stats-line" style="display:none;"></div>
+
+    <!-- Reports -->
+    <table class="batch-results" id="historyTable">
+      <thead><tr><th style="width:13%">公司名称</th><th style="width:72px">时间</th><th style="width:115px">企业质量分</th><th style="width:46px">评级</th><th style="width:62px">推进</th><th>理由</th><th style="width:90px">操作</th></tr></thead>
+      <tbody><tr><td colspan="7" style="text-align:center;color:var(--c-gray);">点击刷新加载</td></tr></tbody>
+    </table>
+    <div class="hist-pager" id="histPager" style="display:none;"></div>
+
+    <h3>📊 批量分析任务</h3>
+    <table class="batch-results" id="batchHistoryTable">
+      <thead><tr><th>任务ID</th><th style="width:130px">时间</th><th style="width:72px">进度</th><th style="width:72px">状态</th><th>操作</th></tr></thead>
+      <tbody><tr><td colspan="5" style="text-align:center;color:var(--c-gray);">点击刷新加载</td></tr></tbody>
+    </table>
+
+    <h3>🔑 Tavily 额度</h3>
+    <table class="batch-results" id="usageTable">
+      <thead><tr><th>Key</th><th style="width:72px">已用</th><th style="width:72px">剩余</th><th style="width:140px">用量</th><th style="width:90px">状态</th></tr></thead>
+      <tbody><tr><td colspan="5" style="text-align:center;color:var(--c-gray);">点击刷新加载</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<button class="back-to-top" id="backToTop" title="回到顶部" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<div class="footer">
+<div style="text-align:center;color:var(--c-gray);font-size:11px;line-height:1.8;">
+  <div style="margin-bottom:4px;">
+    <strong>PE Deep Screening</strong> — AI 驱动的私募并购标的深筛工具
+  </div>
+  <div style="opacity:0.75;">
+    多源检索：Exa 全球搜索 · Tavily 实时检索 · 百度中文补充 · 微信公众号交叉验证 · Playwright 全文抓取 · 企查查工商核验<br>
+    分析框架：Compounder 透镜 5 维加权评分 · ABCD 企业质量评级 · 规模适配与推进建议 · 14 项 PE 红旗检查<br>
+    双模式：单个深筛输出结构化 HTML 报告 · 批量完整分析输出 Excel 结果表 · 表格预筛选零 API 消耗
+  </div>
+  <div style="margin-top:4px;opacity:0.55;">仅供内部 pre-IC 筛选参考，不构成投资建议</div>
+</div>
+
+<script>
+// Back-to-top visibility
+window.addEventListener('scroll', function() {
+  document.getElementById('backToTop').classList.toggle('visible', window.scrollY > 400);
+});
+
+function toggleMethod() {
+  var p = document.getElementById('methodPanel');
+  p.classList.toggle('open');
+}
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function safeVerdict(value) {
+  const normalized = String(value || '').toUpperCase();
+  return ['PASS', 'WATCH', 'REJECT', 'ERROR', 'EXCLUDED'].includes(normalized) ? normalized : 'WATCH';
+}
+
+// ============ 文件上传 ============
+const fileUpload = document.getElementById('fileUpload');
+const bpFileInput = document.getElementById('bpFileInput');
+const fileName = document.getElementById('fileName');
+
+fileUpload.addEventListener('click', () => bpFileInput.click());
+fileUpload.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  fileUpload.classList.add('dragover');
+});
+fileUpload.addEventListener('dragleave', () => fileUpload.classList.remove('dragover'));
+fileUpload.addEventListener('drop', (e) => {
+  e.preventDefault();
+  fileUpload.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    bpFileInput.files = e.dataTransfer.files;
+    showFileName(e.dataTransfer.files[0].name);
+  }
+});
+bpFileInput.addEventListener('change', () => {
+  if (bpFileInput.files.length) showFileName(bpFileInput.files[0].name);
+});
+
+function showFileName(name) {
+  fileName.textContent = '已选择：' + name;
+}
+
+// ============ 表单提交 ============
+const form = document.getElementById('screenForm');
+let pollTimer = null;
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(form);
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '提交中...';
+
+  try {
+    const resp = await fetch('/api/screen', { method: 'POST', body: formData });
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(text.slice(0, 200) || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+
+    // 切换到进度视图
+    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('errorCard').classList.remove('active');
+    document.getElementById('resultCard').classList.remove('active');
+    const progressCard = document.getElementById('progressCard');
+    progressCard.classList.add('active');
+    document.getElementById('progressCompany').textContent = data.company_name;
+
+    // 开始轮询
+    startPolling(data.task_id);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '开始深筛';
+  }
+});
+
+// ============ 轮询状态 ============
+function startPolling(taskId) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const resp = await fetch(`/api/status/${taskId}`);
+      const data = await resp.json();
+
+      updateProgress(data);
+
+      if (data.status === 'completed') {
+        clearInterval(pollTimer);
+        showResult(taskId, data);
+      } else if (data.status === 'error') {
+        clearInterval(pollTimer);
+        showError(data.progress, data.error_detail || '');
+      }
+    } catch (err) {
+      // 网络错误继续轮询
+    }
+  }, 2000);
+}
+
+function updateProgress(data) {
+  var stages = ['search','crawl','analyze','render'];
+  var statusMap = { 'created':'search', 'searching':'search', 'crawling':'crawl', 'analyzing':'analyze', 'generating':'render', 'rendering':'render' };
+
+  if (data.status === 'completed' || data.status === 'error') {
+    stages.forEach(function(s){ var e=document.getElementById('stage-'+s); if(e){ e.classList.remove('active'); e.classList.add('done'); } });
+    document.getElementById('progFill').style.width = '100%';
+    document.getElementById('progressDetail').textContent = data.progress || (data.status=='completed'?'报告生成完成':data.progress);
+    return;
+  }
+
+  if (data.company_name) document.getElementById('progressCompany').textContent = data.company_name;
+
+  // Live streaming text
+  var lta = document.getElementById('liveTextArea');
+  if (data.live_text) {
+    lta.style.display = '';
+    lta.textContent = data.live_text;
+    lta.scrollTop = lta.scrollHeight;
+  } else if (data.status === 'completed') {
+    lta.style.display = 'none';
+  }
+
+  var current = statusMap[data.status] || 'search';
+  var found = false, pct = 0;
+  stages.forEach(function(s, i){
+    var el = document.getElementById('stage-'+s);
+    if (!el) return;
+    el.classList.remove('active','done');
+    if (s === current) { el.classList.add('active'); found = true; pct = (i+1)*25; }
+    else if (!found) { el.classList.add('done'); }
+  });
+  document.getElementById('progFill').style.width = Math.max(pct-12, 5) + '%';
+  document.getElementById('progressDetail').textContent = data.progress || '处理中...';
+}
+function showResult(taskId, data) {
+  document.getElementById('progressCard').classList.remove('active');
+  const grade = data.grade || '';
+  const v = data.verdict === 'pass' ? 'PASS' : (data.verdict === 'reject' ? 'REJECT' : (data.verdict === 'watch' ? 'WATCH' : ''));
+  const vcls = 'v-' + (v === 'PASS' ? 'PASS' : (v === 'REJECT' ? 'REJECT' : 'WATCH'));
+  const recommendation = data.advance_recommendation || '';
+  document.getElementById('resultCompanyName').innerHTML = escapeHtml(data.company_name || '') +
+    (grade ? ' — <span class=\"verdict-badge ' + vcls + '\">' + escapeHtml(grade) + '级</span>' : '') +
+    (recommendation ? ' <span style=\"font-size:13px;\">推进建议：' + escapeHtml(recommendation) + '</span>' : '');
+  const resultCard = document.getElementById('resultCard');
+  resultCard.classList.add('active');
+  document.getElementById('viewBtn').href = `/report/${taskId}`;
+  document.getElementById('downloadBtn').href = `/api/download/${taskId}`;
+}
+
+let lastErrorDetail = '';
+
+function showError(msg, detail) {
+  document.getElementById('progressCard').classList.remove('active');
+  const errorCard = document.getElementById('errorCard');
+  errorCard.classList.add('active');
+  document.getElementById('errorMessage').textContent = msg;
+  if (detail) {
+    lastErrorDetail = detail;
+    document.getElementById('errorDetail').textContent = detail;
+    document.getElementById('toggleDetail').style.display = '';
+  } else {
+    document.getElementById('toggleDetail').style.display = 'none';
+    lastErrorDetail = '';
+  }
+}
+
+function toggleErrorDetail() {
+  const el = document.getElementById('errorDetail');
+  const toggle = document.getElementById('toggleDetail');
+  if (el.classList.contains('active')) {
+    el.classList.remove('active');
+    toggle.textContent = '显示详细信息 ▼';
+  } else {
+    el.classList.add('active');
+    toggle.textContent = '隐藏详细信息 ▲';
+  }
+}
+
+function resetForm() {
+  document.getElementById('formCard').style.display = '';
+  document.getElementById('progressCard').classList.remove('active');
+  document.getElementById('resultCard').classList.remove('active');
+  document.getElementById('errorCard').classList.remove('active');
+  form.reset();
+  fileName.textContent = '';
+  if (pollTimer) clearInterval(pollTimer);
+}
+
+// Mode switch
+function switchTab(tab) {
+  ['tabSingle','tabBatch','tabHistory','tabLogic'].forEach(id => document.getElementById(id).classList.remove('active'));
+  ['formCard','batchCard','historyCard','logicCard'].forEach(id => document.getElementById(id).style.display = 'none');
+  const info = document.getElementById('modeInfo');
+  if (tab === 'single') {
+    document.getElementById('tabSingle').classList.add('active');
+    document.getElementById('formCard').style.display = '';
+    info.innerHTML = '<strong>🔍 单个深筛</strong> — 输入一家公司，执行完整搜索 → 分析 → 评分 → <span class="highlight">生成 HTML 深筛报告</span>，可在「历史报告」中查看和分享。<br><strong>📊 批量完整分析</strong> — 上传 Excel 或粘贴多家公司，<span class="highlight">不生成 HTML 报告</span>，结果以表格展示并提供 Excel 下载。';
+  } else if (tab === 'batch') {
+    document.getElementById('tabBatch').classList.add('active');
+    document.getElementById('batchCard').style.display = '';
+    info.innerHTML = '<strong>📊 批量分析</strong> — <span class="highlight">两步式</span>：① 先上传 Excel 预筛选（秒级完成，零 API 消耗），查看通过/排除结果；② 确认后手动启动完整 AI 深筛分析。<br><strong>提示：</strong>预筛选不消耗 API 额度，完整分析耗时与单家深筛相当（每家约 2-5 分钟）。';
+  } else if (tab === 'history') {
+    document.getElementById('tabHistory').classList.add('active');
+    document.getElementById('historyCard').style.display = '';
+    info.innerHTML = '<strong>📁 历史报告</strong> — 查看所有「单个深筛」生成的 HTML 报告和「批量完整分析」任务记录。<span class="highlight">批量分析只提供 Excel 下载，不生成 HTML 报告</span>。';
+    loadHistory();
+  } else if (tab === 'logic') {
+    document.getElementById('tabLogic').classList.add('active');
+    document.getElementById('logicCard').style.display = '';
+    info.innerHTML = '<strong>📖 分析逻辑</strong> — 了解本工具从信息检索到最终评分的完整分析链路与决策框架。';
+  }
+}
+
+// Batch full analysis
+let batchPollTimer = null;
+document.getElementById('batchFileInput').addEventListener('change', function() {
+  document.getElementById('batchFileName').textContent = this.files.length ? '已选择：' + this.files[0].name : '';
+});
+
+const batchUpload = document.getElementById('batchFileUpload');
+const batchFileInput = document.getElementById('batchFileInput');
+batchUpload.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  batchUpload.classList.add('dragover');
+});
+batchUpload.addEventListener('dragleave', () => batchUpload.classList.remove('dragover'));
+batchUpload.addEventListener('drop', (e) => {
+  e.preventDefault();
+  batchUpload.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    batchFileInput.files = e.dataTransfer.files;
+    document.getElementById('batchFileName').textContent = '已选择：' + e.dataTransfer.files[0].name;
+  }
+});
+
+async function startBatch() {
+  const text = document.getElementById('batchInput').value.trim();
+  const file = document.getElementById('batchFileInput').files[0];
+  if (!text && !file) { alert('请上传企查查 Excel 或输入公司名称'); return; }
+  const names = text.split('\n').map(s => s.trim()).filter(s => s);
+  const mode = document.querySelector('input[name="batchMode"]:checked').value;
+  const fullMode = mode === 'full'; // skip pre-screen, go straight to analysis
+  const excludeForeign = document.getElementById('batchExcludeForeign').checked;
+  document.getElementById('batchCard').style.display = 'none';
+  document.getElementById('batchSubmitBtn').disabled = true;
+  document.getElementById('errorCard').classList.remove('active');
+  document.getElementById('batchProgressCard').classList.add('active');
+  document.getElementById('batchDeepAnalyzeBar').style.display = 'none';
+  document.getElementById('batchProgressTitle').textContent = fullMode ? '📊 批量深筛分析中...' : '📊 预筛选中...';
+  document.getElementById('batchResultsTable').querySelector('tbody').innerHTML = '';
+  try {
+    let resp;
+    if (file) {
+      const formData = new FormData();
+      formData.append('batch_file', file);
+      formData.append('prescreen', fullMode ? '0' : '1');
+      formData.append('exclude_foreign', excludeForeign ? '1' : '0');
+      resp = await fetch('/api/batch-upload', { method: 'POST', body: formData });
+    } else {
+      resp = await fetch('/api/batch-score', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({company_names: names, prescreen: !fullMode, exclude_foreign: excludeForeign}) });
+    }
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || '启动失败');
+    pollBatch(data.batch_id);
+  } catch (err) { showError(err.message); document.getElementById('batchCard').style.display = ''; document.getElementById('batchSubmitBtn').disabled = false; }
+}
+
+function pollBatch(batchId) {
+  document.getElementById("batchProgressCard")._batchId = batchId;
+  if (batchPollTimer) clearInterval(batchPollTimer);
+  batchPollTimer = setInterval(async () => {
+    try {
+      const resp = await fetch('/api/batch-status/' + batchId);
+      const data = await resp.json();
+      document.getElementById('batchProgressDetail').textContent = data.progress;
+      document.getElementById('batchProgressBar').style.width = (data.total > 0 ? Math.round(data.completed / data.total * 100) : 0) + '%';
+
+      // Phase indicator
+      var ps = document.getElementById('bs-pre-screen');
+      var an = document.getElementById('bs-analyze');
+      if (ps && an) {
+        if (data.phase === 'pre_screen') { ps.className = 'prog-stage active'; an.className = 'prog-stage'; }
+        else if (data.phase === 'analyzing') { ps.className = 'prog-stage done'; an.className = 'prog-stage active'; }
+        else if (data.phase === 'completed') { ps.className = 'prog-stage done'; an.className = 'prog-stage done'; }
+        else { ps.className = 'prog-stage'; an.className = 'prog-stage'; }
+      }
+
+      // Pre-screen download bar
+      var psBar = document.getElementById('batchPrescreenBar');
+      if (psBar) {
+        var psDone = data.phase !== 'pre_screen';
+        var hasPsResults = (data.excluded_count > 0 || data.passed_count > 0);
+        if (psDone && hasPsResults) {
+          psBar.style.display = '';
+          document.getElementById('prescreenPassed').textContent = data.passed_count;
+          document.getElementById('prescreenExcluded').textContent = data.excluded_count;
+          document.getElementById('batchPrescreenDownload').href = '/api/batch-prescreen-excel/' + batchId;
+        } else {
+          psBar.style.display = 'none';
+        }
+      }
+
+      // Interim download bar
+      var interimBar = document.getElementById('batchInterimBar');
+      if (interimBar) {
+        var hasResults = data.results && data.results.length > 0;
+        var isRunning = data.status === 'running';
+        if (hasResults && isRunning) {
+          interimBar.style.display = '';
+          document.getElementById('batchInterimCount').textContent = data.results.length;
+          document.getElementById('batchInterimDownload').href = '/api/batch-download-interim/' + batchId;
+        } else {
+          interimBar.style.display = 'none';
+        }
+      }
+
+      if (data.results && data.results.length > 0) {
+        document.getElementById('batchResultsTable').querySelector('tbody').innerHTML = data.results.map((r, i) => {
+          if (r.excluded) {
+            return '<tr class="row-EXCLUDED" onclick="showBatchDetail(event,' + i + ')"><td>' + (i+1) + '</td><td>' + escapeHtml(r.company_name) + '</td><td>' + escapeHtml(r.registered_capital || '-') + '</td><td>-</td><td><span class="excluded-badge">被排除 ' + escapeHtml(r.exclude_code || '') + '</span></td><td>-</td><td><span class="verdict-badge v-EXCLUDED">被排除</span></td><td>-</td><td style="font-size:12px;color:#9E9E9E;">' + escapeHtml(r.exclude_reason || '') + '</td></tr>';
+          }
+          const v = safeVerdict(r.verdict);
+          var scoreVal = parseFloat(r.total) || 0;
+          var pct = Math.min(100, Math.max(0, (scoreVal / 5) * 100));
+          var sc = scoreVal >= 3.8 ? '#2E7D32' : (scoreVal >= 3.0 ? '#1565C0' : (scoreVal >= 2.0 ? '#F57F17' : '#C62828'));
+          var bar = scoreVal > 0 ? '<div style="display:flex;align-items:center;gap:4px;"><div style="flex:1;background:#E5E7EB;border-radius:3px;height:5px;min-width:40px;"><div style="background:' + sc + ';height:5px;border-radius:3px;width:' + pct + '%;"></div></div><span style="font-size:11px;font-weight:700;color:' + sc + ';">' + scoreVal.toFixed(1) + '</span></div>' : '-';
+          return '<tr class="row-' + v + '" onclick="showBatchDetail(event,' + i + ')"><td>' + (i+1) + '</td><td>' + escapeHtml(r.company_name) + '</td><td>' + escapeHtml(r.registered_capital || '-') + '</td><td>' + escapeHtml(r.sources_count || 0) + '</td><td style="width:100px;">' + bar + '</td><td>' + escapeHtml(r.grade || '-') + '</td><td><span class="verdict-badge v-' + v + '">' + escapeHtml(r.advance_recommendation || '-') + '</span></td><td>' + escapeHtml(r.red_count || 0) + '</td><td style="font-size:12px;">' + escapeHtml(r.summary || '-') + '</td></tr>';
+        }).join('');
+      }
+      if (data.status === 'completed') {
+        clearInterval(batchPollTimer);
+        document.getElementById('batchProgressTitle').textContent = '✅ 批量完整分析完成';
+        var exclMsg = data.excluded_count > 0 ? '（' + data.excluded_count + '家被预筛排除）' : '';
+        document.getElementById('batchProgressDetail').textContent = data.progress + exclMsg + '；点击任一公司查看各细项分析。';
+        document.getElementById('batchProgressBar').style.width = '100%';
+        document.getElementById('batchResultCard').classList.add('active');
+        document.getElementById('batchDownloadBtn').href = '/api/batch-download/' + batchId;
+      } else if (data.status === 'prescreen_done') {
+        clearInterval(batchPollTimer);
+        document.getElementById('batchProgressTitle').textContent = '✅ 预筛选完成';
+        document.getElementById('batchProgressDetail').textContent = data.progress;
+        document.getElementById('batchProgressBar').style.width = '100%';
+        // Show deep analyze button
+        var daBar = document.getElementById('batchDeepAnalyzeBar');
+        if (daBar && data.passed_count > 0) {
+          daBar.style.display = '';
+          document.getElementById('batchPassedCount').textContent = data.passed_count;
+        }
+        // Hide interim download bar, show pre-screen download
+        var interimBar = document.getElementById('batchInterimBar');
+        if (interimBar) interimBar.style.display = 'none';
+      } else if (data.status === 'paused_quota') {
+        clearInterval(batchPollTimer);
+        document.getElementById('batchProgressTitle').textContent = '⏸️ ' + data.progress;
+        alert('Tavily额度不足！请更换API Key后恢复。');
+      } else if (data.status === 'error') { clearInterval(batchPollTimer); showError(data.progress); }
+    } catch (err) {}
+  }, 3000);
+}
+
+async function startDeepAnalysis() {
+  const batchId = document.getElementById("batchProgressCard")._batchId;
+  if (!batchId) return;
+  document.getElementById('batchDeepAnalyzeBar').style.display = 'none';
+  document.getElementById('batchProgressTitle').textContent = '📊 批量完整分析中...';
+  document.getElementById('batchProgressDetail').textContent = '正在启动分析...';
+  document.getElementById('batchProgressBar').style.width = '0%';
+  try {
+    const resp = await fetch('/api/batch-analyze/' + batchId, { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || '启动失败');
+    pollBatch(batchId);
+  } catch (err) { showError(err.message); }
+}
+
+function resetBatch() {
+  document.getElementById('batchCard').style.display = '';
+  document.getElementById('batchResultCard').classList.remove('active');
+  document.getElementById('batchProgressCard').classList.remove('active');
+  document.getElementById('batchInput').value = '';
+  document.getElementById('batchFileInput').value = '';
+  document.getElementById('batchFileName').textContent = '';
+  document.getElementById('batchSubmitBtn').disabled = false;
+  if (batchPollTimer) clearInterval(batchPollTimer);
+}
+
+
+function showBatchDetail(ev, index) {
+  ev.stopPropagation();
+  const batchId = document.getElementById("batchProgressCard")._batchId;
+  fetch("/api/batch-detail/" + batchId + "/" + index)
+    .then(r => r.json())
+    .then(d => {
+      const D = ["行业匹配度","Recurring Revenue","市场地位","客户粘性","商业模式"];
+      let s = (d.scores||[]).slice(0, 5).map((sc,i) => "<div class=\"score-item\"><div style=\"font-size:10px;color:var(--c-gray);\">" + escapeHtml(D[i] || '') + "</div><div class=\"val\">" + escapeHtml(sc) + "</div></div>").join("");
+      let f = "";
+      if (d.red_flags) for (const [k,v] of Object.entries(d.red_flags)) {
+        const bg = v==="🟢" ? "#E8F5E9" : (v==="🟡" ? "#FFF8E1" : "#FFEBEE");
+        f += "<span class=\"red-item\" style=\"background:" + bg + ";\">" + escapeHtml(v) + " " + escapeHtml(k) + "</span>";
+      }
+      let rf = "";
+      if (d.refs && d.refs.length) rf = "<h4 style=\"margin-top:10px;font-size:12px;\">参考来源（" + d.refs.length + "条）</h4><ol class=\"ref-list\">" + d.refs.map(r => "<li>" + escapeHtml(r) + "</li>").join("") + "</ol>";
+      let sections = "";
+      if (d.sections) for (const [title, value] of Object.entries(d.sections)) {
+        sections += "<div style=\"margin:8px 0;font-size:12px;line-height:1.6;\"><strong>" + escapeHtml(title) + "：</strong>" + escapeHtml(value || "未见充分公开依据") + "</div>";
+      }
+      const panel = document.getElementById("batchDetail");
+      if (d.excluded) {
+        panel.innerHTML = "<h3>🚫 " + escapeHtml(d.company_name) + " — <span style=\"color:#9E9E9E;\">已被预筛排除</span></h3>" +
+          "<div style=\"padding:16px;background:#F9FAFB;border-radius:8px;margin:8px 0;\">" +
+          "<div style=\"margin-bottom:8px;\"><strong>排除规则：</strong><span class=\"excluded-badge\" style=\"font-size:14px;padding:2px 12px;\">" + escapeHtml(d.exclude_code || '') + "</span></div>" +
+          "<div><strong>排除原因：</strong>" + escapeHtml(d.exclude_reason || '') + "</div></div>" +
+          "<div style=\"display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--c-gray);margin-top:8px;\">" +
+          "<span>注册资本: " + escapeHtml(d.registered_capital || '未导入') + "</span>" +
+          "<span>法定代表人: " + escapeHtml(d.legal_representative || '未导入') + "</span>" +
+          "<span>成立日期: " + escapeHtml(d.established_at || '未导入') + "</span>" +
+          "<span>经营状态: " + escapeHtml(d.registration_status || '未导入') + "</span></div>";
+        panel.classList.add("active");
+        panel.scrollIntoView({behavior:"smooth",block:"nearest"});
+        return;
+      }
+      panel.innerHTML = "<h3>📋 " + escapeHtml(d.company_name) + " — <span style=\"color:" + (d.grade==="D"?"var(--c-danger)":"var(--c-primary)") + ";\">" + escapeHtml(d.grade) + "级 / " + escapeHtml(d.advance_recommendation || "-") + "</span></h3>" +
+        "<div style=\"display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;font-size:12px;\">" +
+        "<span>🏭 " + escapeHtml(d.industry || "?") + "</span><span>💰 规模推断: " + escapeHtml(d.revenue_est || "?") + "</span>" +
+        "<span>工商注册资本: " + escapeHtml(d.registered_capital || "未导入") + "</span><span>法定代表人: " + escapeHtml(d.legal_representative || "未导入") + "</span>" +
+        "<span>🔄 RR: " + escapeHtml(d.rr || "?") + "</span><span>证据可信度: " + escapeHtml(d.evidence_confidence || "?") + "</span><span>🚩 红旗: " + escapeHtml(d.red_count || 0) + " (" + escapeHtml(d.red_severity || "?") + ")</span>" +
+        "<span>🔗 搜索来源: " + escapeHtml(d.sources_count || 0) + " 个网站</span></div>" +
+        "<div class=\"score-row\">" + s + "</div>" +
+        "<div style=\"margin:8px 0;font-size:12px;line-height:1.6;\"><strong>规模适配：</strong>" + escapeHtml(d.scale_fit_label || "未评估") + " — " + escapeHtml(d.scale_fit_reason || "") + "</div>" +
+        "<div style=\"margin:8px 0;font-size:12px;line-height:1.6;\"><strong>交易障碍：</strong>" + escapeHtml(d.transaction_obstacle_label || "未评估") + " — " + escapeHtml(d.transaction_obstacle_reason || "") + "</div>" +
+        "<div style=\"margin:8px 0;font-size:12px;line-height:1.6;\"><strong>推进理由：</strong>" + escapeHtml(d.advance_reason || d.decision_note || "") + "</div>" +
+        "<div style=\"margin:8px 0;font-size:12px;line-height:1.6;white-space:pre-wrap;\"><strong>摘要：</strong>" + escapeHtml(d.summary || "") + "</div>" +
+        "<div style=\"margin:8px 0;background:var(--c-gray-bg);padding:10px;border-radius:6px;\"><strong style=\"font-size:12px;\">各细项分析</strong>" + sections + "</div>" +
+        "<div style=\"margin:8px 0;\">" + f + "</div>" + rf;
+      panel.classList.add("active");
+      panel.scrollIntoView({behavior:"smooth",block:"nearest"});
+    })
+    .catch(() => {
+      const panel = document.getElementById("batchDetail");
+      panel.innerHTML = "<div style=\"color:var(--c-danger);\">加载详情失败</div>";
+      panel.classList.add("active");
+    });
+}
+
+
+let histPage = 1;
+async function loadHistory(page) {
+  page = page || histPage;
+  histPage = page;
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch('/api/reports?page='+page+'&limit=10').then(r => r.json()),
+      fetch('/api/batches').then(r => r.json())
+    ]);
+
+    // Stats - simple inline text
+    var s = r1.stats || {};
+    var parts = ['共 <b>'+(s.total||0)+'</b> 份报告'];
+    if (s.avg_score) parts.push('均分 <b>'+(s.avg_score||0)+'</b>');
+    var grades = s.by_grade || {};
+    var gc = {A:'#2E7D32',B:'#1E40AF',C:'#F57F17',D:'#C62828'};
+    for (var g in gc) { var c = grades[g]||0; if(c) parts.push('<b style="color:'+gc[g]+'">'+g+'级 '+c+'</b>'); }
+    var verdicts = s.by_verdict || {};
+    var vl = {pass:'通过',watch:'观察',reject:'拒绝'};
+    for (var v in vl) { var c = verdicts[v]||0; if(c) parts.push(vl[v]+' '+c); }
+    document.getElementById('histStats').innerHTML = parts.join(' &middot; ');
+    document.getElementById('histStats').style.display = '';
+
+    // Reports table
+    var t1 = document.getElementById('historyTable').querySelector('tbody');
+    if (r1.reports && r1.reports.length) {
+      t1.innerHTML = r1.reports.map(function(r){
+        var g = r.grade || '-';
+        var score = parseFloat(r.total_score) || 0;
+        var rec = r.advance_recommendation || '-';
+        var reason = (r.advance_reason||'-').toString();
+        var tid = encodeURIComponent(String(r.task_id||''));
+        var act = r.status==='completed'
+          ? '<a href="/report/'+tid+'" target="_blank" class="btn-primary" style="padding:3px 10px;">查看</a> <button onclick="deleteReport(\''+tid+'\')" class="btn-secondary" style="padding:3px 7px;">删除</button>'
+          : '<span style="color:var(--c-gray);">'+escapeHtml(r.status)+'</span>';
+        var pct = Math.min(100,Math.max(0,(score/5)*100));
+        var bc = score>=3.8?'#2E7D32':(score>=3.0?'#1565C0':(score>=2.0?'#F57F17':'#C62828'));
+        var bar = score>0?'<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;background:#E5E7EB;border-radius:3px;height:5px;"><div style="background:'+bc+';height:5px;border-radius:3px;width:'+pct+'%;"></div></div><span style="font-weight:700;color:'+bc+';">'+score.toFixed(1)+'</span></div>':'<span style="color:var(--c-gray);">-</span>';
+        var gcc = g==='A'?'#2E7D32':(g==='B'?'#1E40AF':(g==='C'?'#F57F17':'#C62828'));
+        var gbgc = g==='A'?'#E8F5E9':(g==='B'?'#E3F2FD':(g==='C'?'#FFF8E1':'#FFEBEE'));
+        var gb = '<span style="display:inline-block;min-width:22px;text-align:center;padding:2px 7px;border-radius:10px;font-weight:700;color:'+gcc+';background:'+gbgc+';">'+escapeHtml(g)+'</span>';
+        var rb = '推进'===rec?'<span class="verdict-badge v-PASS">推进</span>':('观察'===rec?'<span class="verdict-badge v-WATCH">观察</span>':'<span class="verdict-badge v-REJECT">'+escapeHtml(rec)+'</span>');
+        return '<tr><td>'+escapeHtml(r.company_name||'')+'</td><td style="color:var(--c-gray);">'+escapeHtml((r.created_at||'').slice(5,16))+'</td><td>'+bar+'</td><td>'+gb+'</td><td>'+rb+'</td><td style="line-height:1.5;">'+escapeHtml(reason)+'</td><td>'+act+'</td></tr>';
+      }).join('');
+    } else { t1.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--c-gray);">暂无单个深筛报告</td></tr>'; }
+
+    // Pagination
+    var tp = r1.total_pages || 1;
+    var pi = document.getElementById('histPageInfo');
+    pi.textContent = '（第'+r1.page+'/'+tp+'页，共'+(r1.total||0)+'条）';
+    var pager = document.getElementById('histPager');
+    if (tp > 1) {
+      var ph = '<button onclick="loadHistory('+Math.max(1,page-1)+')" '+(page<=1?'disabled':'')+'>上一页</button>';
+      for (var x=1; x<=tp; x++) ph += '<button class="'+(x===page?'active-page':'')+'" onclick="loadHistory('+x+')">'+x+'</button>';
+      ph += '<button onclick="loadHistory('+Math.min(tp,page+1)+')" '+(page>=tp?'disabled':'')+'>下一页</button>';
+      pager.innerHTML = ph;
+      pager.style.display = '';
+    } else { pager.style.display = 'none'; }
+
+    // Batch history
+    var t2 = document.getElementById('batchHistoryTable').querySelector('tbody');
+    if (r2.batches&&r2.batches.length) {
+      t2.innerHTML = r2.batches.map(function(b){
+        var st = b.status==='completed'?'<span style="color:#2E7D32;font-weight:600;">已完成</span>':(b.status==='running'?'<span style="color:var(--c-accent);">运行中</span>':'<span style="color:var(--c-gray);">'+escapeHtml(b.status)+'</span>');
+        var act = b.status==='completed'?'<a href="/api/batch-download/'+encodeURIComponent(b.batch_id)+'" class="btn-primary" style="padding:3px 10px;">下载Excel</a>':'-';
+        return '<tr><td style="font-family:monospace;">'+escapeHtml(b.batch_id||'')+'</td><td style="color:var(--c-gray);">'+escapeHtml((b.created_at||'').slice(0,16))+'</td><td>'+(b.completed||0)+'/'+(b.total||0)+'</td><td>'+st+'</td><td>'+act+'</td></tr>';
+      }).join('');
+    } else { t2.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--c-gray);">暂无批量分析任务</td></tr>'; }
+
+    // Tavily usage
+    try {
+      var u = await fetch('/api/usage').then(function(r){return r.json()});
+      var t3 = document.getElementById('usageTable').querySelector('tbody');
+      if (u.keys&&u.keys.length) {
+        t3.innerHTML = u.keys.map(function(k, i){
+          var pct = Math.min(k.percent, 100);
+          var bc = pct>80?'#C62828':'#2E7D32';
+          var bar = '<div style="display:flex;align-items:center;gap:6px;"><div style="background:#E5E7EB;border-radius:3px;height:5px;width:100px;"><div style="background:'+bc+';height:5px;border-radius:3px;width:'+pct+'%;"></div></div><span style="font-weight:600;font-size:12px;">'+k.percent+'%</span></div>';
+          var label = k.label || ('Key '+(i+1));
+          return '<tr><td><b>#'+(i+1)+'</b> '+escapeHtml(label)+'</td><td style="text-align:right;">'+escapeHtml(k.credits_used)+'</td><td style="text-align:right;">'+escapeHtml(k.remaining)+'</td><td>'+bar+'</td><td>'+(k.is_current?'<span style="color:#2E7D32;font-weight:700;">● 使用中</span>':'<span style="color:#9E9E9E;">○ 待命</span>')+'</td></tr>';
+        }).join('');
+      } else { t3.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--c-gray);">暂无数据</td></tr>'; }
+    } catch(e){}
+  } catch(e) { console.error(e); }
+}
+
+async function deleteReport(taskId) {
+  if (!confirm('确定要删除这个报告吗？')) return;
+  try {
+    await fetch('/api/reports/' + taskId, { method: 'DELETE' });
+    loadHistory();
+  } catch(e) { alert('删除失败: ' + e.message); }
+}
+</script>
+
+</body>
+</html>

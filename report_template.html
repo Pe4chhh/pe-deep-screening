@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{公司名称}} - PE并购深筛报告</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root {
+    --c-bg: #F8F9FA;
+    --c-surface: #FFFFFF;
+    --c-primary: #1B2A4A;
+    --c-secondary: #3D5A80;
+    --c-accent: #4A90D9;
+    --c-success: #2E7D32;
+    --c-success-bg: #E8F5E9;
+    --c-warning: #F57F17;
+    --c-warning-bg: #FFF8E1;
+    --c-danger: #C62828;
+    --c-danger-bg: #FFEBEE;
+    --c-gray: #6B7280;
+    --c-gray-bg: #F3F4F6;
+    --c-border: #E5E7EB;
+    --c-text: #1F2937;
+    --c-text-secondary: #6B7280;
+    --c-radius: 10px;
+    --c-radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--c-bg);
+    color: var(--c-text);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  .container { max-width: 800px; margin: 0 auto; padding: 24px 20px; }
+
+  /* Header */
+  .report-header {
+    background: var(--c-primary);
+    color: white;
+    padding: 24px 32px;
+    border-radius: var(--c-radius);
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .report-header h1 { font-size: 22px; font-weight: 600; }
+  .report-header .meta { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+  .grade-badge {
+    font-size: 28px; font-weight: 700;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid rgba(255,255,255,0.5);
+  }
+  .grade-a { background: var(--c-success); }
+  .grade-b { background: var(--c-accent); }
+  .grade-c { background: var(--c-warning); }
+  .grade-d { background: var(--c-danger); }
+
+  /* Verdict badge — displayed alongside the ABCD grade badge in the header */
+  .header-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .verdict-badge {
+    font-size: 16px; font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    white-space: nowrap;
+    letter-spacing: 1px;
+  }
+  .verdict-badge.verdict-pass { background: #1B5E20; color: white; }
+  .verdict-badge.verdict-watch { background: #E65100; color: white; }
+  .verdict-badge.verdict-reject { background: #B71C1C; color: white; }
+
+  /* Executive Summary */
+  .exec-summary {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--c-accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .exec-summary h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--c-primary); }
+
+  /* KPI Cards - 2x2 grid */
+  .kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 0; }
+  .kpi-card {
+    background: var(--c-surface);
+    border-radius: var(--c-radius-sm);
+    padding: 14px 16px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .kpi-card .value { font-size: 18px; font-weight: 600; color: var(--c-primary); }
+  .kpi-card .label { font-size: 11px; color: var(--c-text-secondary); margin-top: 4px; }
+
+  /* Charts Row: left kpi + right radar */
+  .top-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; align-items: start; }
+  .chart-card {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--c-primary); }
+  .chart-card canvas { width: 100% !important; height: 280px !important; }
+
+  /* Red Flags */
+  .red-flags {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .red-flags h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--c-danger); }
+  .flag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .flag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .flag-grid > .flag-grid, .flag-grid > .flag-list, .flag-list > .flag-grid, .flag-list > .flag-list {
+    display: contents;  /* 嵌套grid穿透，避免白块 */
+  }
+  .flag-grid > hr, .flag-list > hr {
+    grid-column: 1 / -1;  /* hr跨两列 */
+    border: none;
+    border-top: 1px solid var(--c-border);
+    margin: 4px 0;
+  }
+  .flag-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--c-radius-sm);
+    font-size: 13px;
+    min-width: 0;
+  }
+  .flag-clear { background: var(--c-success-bg); }
+  .flag-suspect { background: var(--c-warning-bg); }
+  .flag-found { background: var(--c-danger-bg); }
+  .flag-found.killer { border: 2px solid var(--c-danger); }
+  .flag-icon { font-size: 16px; flex-shrink: 0; }
+  .flag-severity { font-size: 11px; margin-left: auto; font-weight: 600; }
+
+  /* Collapsible Sections (grid trick for smooth animation) */
+  .section {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    user-select: none;
+    transition: background 0.15s;
+    gap: 12px;
+  }
+  .section-header:hover { background: var(--c-gray-bg); }
+  .section-header h3 { font-size: 14px; font-weight: 600; color: var(--c-primary); flex-shrink: 0; }
+  .section-number {
+    background: var(--c-accent);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .section-title-group { display: flex; align-items: center; flex-shrink: 0; }
+  .section-summary {
+    font-size: 12px;
+    color: var(--c-text-secondary);
+    flex: 1;
+    line-height: 1.5;
+    text-align: right;
+    padding-top: 3px;
+  }
+  .section-arrow {
+    font-size: 12px; color: var(--c-gray);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+  .section-arrow.open { transform: rotate(90deg); }
+  .section-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s ease;
+  }
+  .section-body.open {
+    grid-template-rows: 1fr;
+  }
+  .section-body > .body-inner {
+    overflow: hidden;
+  }
+  .section-body .body-content {
+    padding: 0 20px 20px;
+  }
+  .section-body p { margin-bottom: 10px; }
+  .section-body table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  .section-body th, .section-body td {
+    border: 1px solid var(--c-border);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 13px;
+  }
+  .section-body th { background: var(--c-gray-bg); font-weight: 600; }
+
+  /* Evidence Badges */
+  .ev-a { background: #E8F5E9; color: #2E7D32; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .ev-b { background: #E3F2FD; color: #1565C0; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .ev-c { background: #FFF8E1; color: #F57F17; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .ev-d { background: #F3F4F6; color: #6B7280; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+
+  /* Verdict Box */
+  .verdict-box {
+    padding: 16px 20px;
+    border-radius: var(--c-radius);
+    margin: 12px 0;
+    font-weight: 500;
+    color: var(--c-text);
+  }
+  .verdict-box strong { font-size: 16px; display: block; margin-bottom: 8px; }
+  .verdict-box.verdict-pass { background: var(--c-success-bg); border-left: 4px solid var(--c-success); }
+  .verdict-box.verdict-watch { background: var(--c-warning-bg); border-left: 4px solid var(--c-warning); }
+  .verdict-box.verdict-reject { background: var(--c-danger-bg); border-left: 4px solid var(--c-danger); }
+
+  /* Next Steps */
+  .next-steps {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .next-steps h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--c-primary); }
+  .step-item { padding: 10px 0; border-bottom: 1px solid var(--c-border); }
+  .step-item:last-child { border-bottom: none; }
+  .step-item .q { font-weight: 600; color: var(--c-text); }
+  .step-item .why { font-size: 12px; color: var(--c-text-secondary); margin-top: 4px; }
+
+  /* Footer */
+  .report-footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--c-gray);
+    padding: 20px 0;
+    border-top: 1px solid var(--c-border);
+    margin-top: 20px;
+  }
+
+  /* Note Box */
+  .note-box {
+    background: var(--c-warning-bg);
+    border: 1px solid var(--c-warning);
+    border-radius: var(--c-radius-sm);
+    padding: 12px 16px;
+    margin: 10px 0;
+    font-size: 12px;
+    color: #5D4037;
+  }
+
+  /* Clickable Flag Cards */
+  .flag-item.clickable {
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .flag-item.clickable:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .flag-item .flag-link {
+    font-size: 11px;
+    color: var(--c-accent);
+    margin-left: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    font-weight: 600;
+  }
+  .flag-item.clickable:hover .flag-link {
+    opacity: 1;
+  }
+
+  /* Citation Superscripts */
+  .cite {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--c-accent);
+    background: rgba(74, 144, 217, 0.1);
+    border-radius: 4px 4px 4px 0;
+    padding: 0 4px;
+    margin: 0 2px;
+    vertical-align: super;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1.2;
+    transition: background 0.15s, color 0.15s;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .cite:hover {
+    background: var(--c-accent);
+    color: white;
+  }
+  .cite.external::after {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-left: 2px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234A90D9'%3E%3Cpath d='M14 3v5h5V3h-5m0 11h5v5h-5v-5m-2-9H3v5h5V3M3 14h5v5H3v-5m13-5V8h-2v1m0 4V8h-2v1m0 4V8h-2v1m2 0h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H16v2H8v-8h8v2zm2-4h1v1h-1V10zm-4 0h1v1H10V10z'/%3E%3C/svg%3E");
+    background-size: contain;
+    vertical-align: middle;
+    opacity: 0.6;
+  }
+  .cite.external:hover::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M14 3v5h5V3h-5m0 11h5v5h-5v-5m-2-9H3v5h5V3M3 14h5v5H3v-5m13-5V8h-2v1m0 4V8h-2v1m0 4V8h-2v1m2 0h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H16v2H8v-8h8v2zm2-4h1v1h-1V10zm-4 0h1v1H10V10z'/%3E%3C/svg%3E");
+  }
+
+  /* References Section */
+  .references {
+    background: var(--c-surface);
+    border-radius: var(--c-radius);
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .references h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--c-primary); }
+  .references-list { list-style: none; padding: 0; margin: 0; }
+  .references-list li {
+    font-size: 12px;
+    color: var(--c-text-secondary);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--c-border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .references-list li:last-child { border-bottom: none; }
+  .references-list .ref-num {
+    background: rgba(74, 144, 217, 0.1);
+    color: var(--c-accent);
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .references-list .ref-content { flex: 1; word-break: break-all; }
+  .references-list a {
+    color: var(--c-accent);
+    text-decoration: none;
+    word-break: break-all;
+  }
+  .references-list a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- REPORT HEADER -->
+  <div class="report-header">
+    <div>
+      <h1>{{公司名称}}</h1>
+      <div class="meta">{{行业归属}} | {{业务类型}} | {{报告日期}}</div>
+      <div style="margin-top:4px;font-size:14px;font-weight:600;">ABCD评级：{{评级字母}} | 推进建议：{{推进建议}}</div>
+    </div>
+    <div class="header-badges">
+      <div class="grade-badge grade-{{评级字母}}">
+        {{评级字母}}
+      </div>
+      <div class="verdict-badge verdict-{{pass/watch/reject}}">
+        {{推进建议}}
+      </div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <div class="exec-summary">
+    <h2>执行摘要</h2>
+    <p>{{执行摘要内容，150-300字。包含：是否值得优先接触、Platform/Add-on判断、recurring revenue大致判断、规模推断（含区间和证据等级）、最关键吸引点、最关键风险、建议。}}</p>
+  </div>
+
+  <!-- TOP ROW: KPI cards (left, 2x2) + Radar chart (right) -->
+  <div class="top-row">
+    <!-- KPI Cards: 2 rows x 2 cols -->
+    <div>
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="value">{{总评分}}</div>
+          <div class="label">企业质量分 (不含规模/可交易性)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="value">{{规模推断}}</div>
+          <div class="label">营收规模 ({{证据等级}})</div>
+        </div>
+      </div>
+      <div class="kpi-row" style="margin-top:12px;">
+        <div class="kpi-card">
+          <div class="value">{{revenue判断}}</div>
+          <div class="label">Recurring Revenue</div>
+        </div>
+        <div class="kpi-card">
+          <div class="value">{{红旗数量}}</div>
+          <div class="label">红旗项 ({{严重度}})</div>
+        </div>
+      </div>
+      <div class="kpi-row" style="margin-top:12px;">
+        <div class="kpi-card">
+          <div class="value">{{评分可信度}}</div>
+          <div class="label">评分证据可信度</div>
+        </div>
+        <div class="kpi-card">
+          <div class="value" style="font-size:14px;">{{评分方法}}</div>
+          <div class="label">最终决策计算方式</div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--c-text-secondary);margin-top:4px;">{{可信度说明}}</p>
+      <p style="font-size:12px;color:var(--c-primary);margin-top:6px;"><strong>推进建议：</strong>{{推进建议}}</p>
+      <p style="font-size:11px;color:var(--c-text-secondary);margin-top:4px;">{{推进建议理由}}</p>
+    </div>
+
+    <!-- Radar Chart -->
+    <div class="chart-card">
+      <h3>七维度原始评分画像</h3>
+      <canvas id="radarChart" height="280"></canvas>
+      <p style="font-size:11px;color:var(--c-text-secondary);margin-top:8px;">{{雷达与评分说明}}</p>
+    </div>
+  </div>
+
+  <!-- RED FLAGS -->
+  <div class="red-flags">
+    <h2>⚑ 红旗与风险核查 <span style="font-size:12px;color:var(--c-gray);font-weight:400;">（点击卡片跳转详情）</span></h2>
+    <div class="flag-grid">
+      {{红旗清单HTML}}
+      <!-- 示例格式（生成时替换）：
+      flag-item 说明：
+      - class 末尾加 clickable 表示可点击
+      - onclick="scrollToSection('secN')" 指定跳转目标章节
+      - 末尾加 <span class="flag-link">→ §N</span> 显示悬停指示
+      -->
+    </div>
+  </div>
+
+  <!-- CARD-BASED SECTIONS (matching radar chart 1:1) -->
+
+  <!-- ====== 卡片 1：行业匹配度 ====== -->
+  <div class="section" id="sec1">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">1</div>
+        <h3>行业匹配度</h3>
+      </div>
+      <div class="section-summary">{{card1_industry_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      {{card1_industry_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 卡片 2：Recurring Revenue ====== -->
+  <div class="section" id="sec2">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">2</div>
+        <h3>Recurring Revenue <span style="color:var(--c-danger);font-size:11px;font-weight:400;">(核心)</span></h3>
+      </div>
+      <div class="section-summary">{{card2_rr_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      <p><strong>{{card2_rr_verdict}}</strong></p>
+      {{card2_rr_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 卡片 3：市场地位 ====== -->
+  <div class="section" id="sec3">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">3</div>
+        <h3>市场地位</h3>
+      </div>
+      <div class="section-summary">{{card3_market_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      {{card3_market_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 卡片 4：客户粘性 ====== -->
+  <div class="section" id="sec4">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">4</div>
+        <h3>客户粘性</h3>
+      </div>
+      <div class="section-summary">{{card4_stickiness_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      {{card4_stickiness_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 卡片 5：商业模式 ====== -->
+  <div class="section" id="sec5">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">5</div>
+        <h3>商业模式</h3>
+      </div>
+      <div class="section-summary">{{card5_bizmodel_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      {{card5_bizmodel_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 卡片 6：角色定位 ====== -->
+  <div class="section" id="sec6">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">6</div>
+        <h3>角色定位 <span style="font-size:11px;color:var(--c-gray);font-weight:400;">（定性判断，不评分）</span></h3>
+      </div>
+      <div class="section-summary">{{card6_platform_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      <p><strong>{{card6_platform_verdict}}</strong></p>
+      {{card6_platform_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 交易可行性 & 规模适配 ====== -->
+  <div class="section" id="sec7">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">7</div>
+        <h3>交易可行性 & 规模适配</h3>
+      </div>
+      <div class="section-summary">{{card7_trade_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      <p><strong>规模推断：{{card7_revenue}}</strong></p>
+      <p><strong>规模适配：</strong>{{card7_scale}}</p>
+      <p><strong>交易障碍：</strong>{{card7_obstacle}}</p>
+      {{card7_trade_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 红旗核查 ====== -->
+  <div class="section" id="sec8">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-title-group">
+        <div class="section-number">8</div>
+        <h3>红旗核查与证据</h3>
+      </div>
+      <div class="section-summary">{{card8_flags_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      <canvas id="evidenceChart" height="100"></canvas>
+      {{card8_flags_content}}
+    </div></div></div>
+  </div>
+
+  <!-- ====== 最终建议 ====== -->
+  <div class="section" id="sec9" style="border-left: 4px solid var(--c-accent);">
+    <div class="section-header" onclick="toggleSection(this)" style="background: rgba(74,144,217,0.06);">
+      <div class="section-title-group">
+        <div class="section-number">9</div>
+        <h3>最终建议</h3>
+      </div>
+      <div class="section-summary">{{card9_final_summary}}</div>
+      <span class="section-arrow">&#9654;</span>
+    </div>
+    <div class="section-body"><div class="body-inner"><div class="body-content">
+      <div class="verdict-box verdict-{{pass/watch/reject}}">
+        <strong>{{推进建议}}</strong>
+        {{card9_final_content}}
+      </div>
+    </div></div></div>
+  </div>
+<div class="references">
+    <h2>参考来源</h2>
+    <ol class="references-list">
+      {{参考来源清单}}
+    </ol>
+  </div>
+</div>
+
+</div>
+
+<script>
+// Toggle collapsible sections
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.section-arrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+// Scroll to section and auto-expand it
+function scrollToSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  // Auto-expand the section if it's collapsed
+  const body = section.querySelector('.section-body');
+  const header = section.querySelector('.section-header');
+  const arrow = header ? header.querySelector('.section-arrow') : null;
+
+  if (body && !body.classList.contains('open')) {
+    body.classList.add('open');
+    if (arrow) arrow.classList.add('open');
+  }
+
+  // Smooth scroll to the section body so the substantive analysis is visible first
+  const target = body || section;
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // Highlight flash effect
+  section.style.transition = 'background 0.3s';
+  section.style.background = 'rgba(74, 144, 217, 0.08)';
+  setTimeout(() => {
+    section.style.background = '';
+  }, 600);
+}
+
+// Citation click handler - scroll to reference and highlight
+function scrollToRef(refIndex) {
+  const ref = document.getElementById('ref-' + refIndex);
+  if (ref) {
+    ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ref.style.transition = 'background 0.4s';
+    ref.style.background = 'rgba(74, 144, 217, 0.15)';
+    setTimeout(() => { ref.style.background = ''; }, 800);
+  }
+}
+
+// Citation click handler — event delegation on all .cite superscripts
+document.addEventListener('click', function(e) {
+  const cite = e.target.closest('.cite');
+  if (cite) {
+    e.preventDefault();
+    const href = cite.getAttribute('href') || '';
+    const hrefMatch = href.match(/#ref-(\d+)/);
+    const textMatch = cite.textContent.match(/(\d+)/);
+    const refIndex = hrefMatch ? parseInt(hrefMatch[1]) : (textMatch ? parseInt(textMatch[1]) : NaN);
+    if (!isNaN(refIndex)) scrollToRef(refIndex);
+  }
+});
+
+// Radar Chart - 5 dimensions
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['行业匹配度', 'Recurring Revenue', '市场地位', '客户粘性', '商业模式'],
+    datasets: [{
+      label: {{公司名称JSON}},
+      data: [{{5个维度评分，逗号分隔}}],
+      fill: true,
+      backgroundColor: 'rgba(74, 144, 217, 0.15)',
+      borderColor: '#4A90D9',
+      pointBackgroundColor: '#4A90D9',
+      pointBorderColor: '#fff',
+      pointHoverBackgroundColor: '#fff',
+      pointHoverBorderColor: '#4A90D9'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    scales: {
+      r: {
+        beginAtZero: true,
+        max: 5,
+        min: 0,
+        ticks: { stepSize: 1, font: { size: 10 } },
+        pointLabels: { font: { size: 11 } }
+      }
+    },
+    plugins: {
+      legend: { display: false }
+    }
+  }
+});
+
+// Evidence Level Bar Chart
+new Chart(document.getElementById('evidenceChart'), {
+  type: 'bar',
+  data: {
+    labels: ['行业归属', '商业模式', 'Recurring Rev', '客户质量', '切换成本', '市场地位', '规模推断'],
+    datasets: [{
+      label: '证据等级',
+      data: [{{8个结论项的证据等级数字，A=4 B=3 C=2 D=1}}],
+      backgroundColor: {{根据等级生成颜色数组}},
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: true,
+    scales: {
+      x: { min: 0, max: 4, ticks: { callback: v => ['','D','C','B','A'][v], stepSize: 1 }, grid: { color: '#f0f0f0' } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+
+</body>
+</html>
