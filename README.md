@@ -6,6 +6,68 @@ AI 驱动的私募股权（PE）并购标的筛选 Agent 系统。给 LLM 装上
 
 ---
 
+## 系统架构
+
+```mermaid
+flowchart TB
+    subgraph 输入
+        A[公司名称 / 企查查 Excel]
+    end
+
+    subgraph 信息检索
+        B1[Exa 全球搜索]
+        B2[Tavily 实时检索]
+        B3[百度中文补充]
+        B4[微信公众号交叉验证]
+        B5[企查查 MCP 工商核验]
+        B6[Playwright 全文抓取]
+    end
+
+    subgraph AI Agent 分析
+        C1[程序预搜索<br/>5 个固定尽调主题]
+        C2[LLM 持有搜索工具<br/>自主补搜 · 最多 3 轮]
+        C3[多维度深度分析<br/>HTML 格式输出]
+        C4[结构化 JSON 提取<br/>10 层容错解析]
+    end
+
+    subgraph 程序裁判 Guardrails
+        D1[固定权重重算总分<br/>ABCD 评级]
+        D2[红旗规则强制封顶<br/>维度分上限约束]
+        D3[交易可行性硬否决]
+        D4[自我审查<br/>内部矛盾检测修复]
+    end
+
+    subgraph 输出
+        E1[HTML 深筛报告<br/>雷达图 · 评分卡 · 红旗清单]
+        E2[Excel 批量结果表<br/>含预筛排除明细]
+    end
+
+    A --> B1 & B2 & B3 & B4 & B5
+    B1 & B2 & B3 & B4 & B5 --> C1
+    C1 --> C2
+    C2 -->|信息够用| C3
+    C2 -->|信息缺口| C2
+    C3 --> C4
+    B6 --> C1
+    C4 --> D1 --> D2 --> D3 --> D4
+    D4 --> E1 & E2
+
+    style C2 fill:#1B2A4A,color:#fff,stroke:#4A90D9
+    style D1 fill:#2E7D32,color:#fff
+    style D4 fill:#E65100,color:#fff
+```
+
+> 上图展示了从信息检索到最终输出的完整链路。核心区分：**蓝色 = AI 自主决策（Agent），绿色 = 程序裁判（Guardrails），橙色 = 自动纠错（Self-Critique）**。具体评分权重和阈值未在公开仓库中展示。
+
+### 分析流程示意
+
+1. **信息搜集** → 多源并行搜索，按公司名 + 主题过滤，结构化去重
+2. **AI 分析** → LLM 阅读搜索结果，对每个维度给出 1-5 分 + 详细理由 + 公开证据引用
+3. **程序复算** → 用固定公式重算总分和评级（不信任 AI 的算术），红旗规则修正维度分
+4. **决策输出** → 综合企业质量 + 规模适配 + 交易可行性 + 角色定位 → 推进建议 + HTML 报告
+
+---
+
 ## 功能概览
 
 ### 模式一：单个深筛
